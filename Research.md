@@ -9,7 +9,11 @@ Assembler
     self assembler: runs on same computer it produces machine language code for
     cross assembler: runs of diff computer than the one it produces machine language for
     Single pass: generates opcode immediately in memory . but issue is it wants all the labels to be pre defined. If some new label comes, it is not able to resolve (soln: 2 pass).
-    
+    3 main data structures:
+    opcode table
+    location counter
+    symbol table
+
 
 **2 pass assembler**: if it encounters a label it doesnt recognise, it puts it in the symbol table along with the address where the undefined symbol's value has to be placed if encountered again. 
     First pass: for forward references and generate new opcodes and doing recursion (check ref 2) Symbol table is generated. 
@@ -37,6 +41,7 @@ Project Specs:
             1 Stack pointer
         operand is 2's complement (with sign)
     Assembler:
+        Single pass but two pass (check notes at page 5 of ps)
         Line based
         comments ';'
         blank lines are permitted
