@@ -31,6 +31,15 @@ Program Counter/ Instruction Pointer
     register keeping track of where the processor is in a program (bookmark).
     holds memory address of next instruction that processor will execute.
 
+Opcode
+    numerical code that tells processor which action to perform
+Operand
+    data or target value that the instruction acts on. this is not register (add, sub dont require operand. ldc 5 br loop have operand (target value or address))
+    can be number or label name
+Label
+    Human readable bookmark given to specific memory address
+    since assembly doesnt have variables, it uses this to give symbolic names to memory addresses.
+    $t0 is not a label though 
 
 Project Specs:
 
@@ -67,5 +76,6 @@ References:
 https://www.geeksforgeeks.org/compiler-design/introduction-of-assembler/
 https://kshitij-taley19.medium.com/two-pass-assembler-3c193c612cb8
 https://github.com/ayushoriginal/Two-pass-Assembler/blob/master/README.md
+https://www.youtube.com/watch?v=BUZycVrWPa4
 
 
