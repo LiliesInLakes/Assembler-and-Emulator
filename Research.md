@@ -47,6 +47,8 @@ Project Specs:
         blank lines are permitted
         white space at start are allowed
         label names are followed by a ':'
+        alphanumeric label names are valid but has to start with alphabet
+        operand is either label or number(hex, dec, oct)
         will produce a listing file (human readable)
             address followed by zero or one 32 bit value (in hex)
             ![alt text](image.png)
@@ -55,7 +57,11 @@ Project Specs:
 To explore:
     Hash table to store symbol tables. 
 
-
+What we have to do:
+    Assembler
+    Bubble Sort in IITPSx assembly
+    Emulator
+    Test Cases have to pass
 
 References:
 https://www.geeksforgeeks.org/compiler-design/introduction-of-assembler/
