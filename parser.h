@@ -1,3 +1,11 @@
+//  ==============================================================================
+//  Author       : Avni Agarwal
+//  Roll No.     : 2501AI27
+//  Declaration of Authorship:
+//  I hereby declare that this code is my own original work.
+//  ==============================================================================
+
+
 #ifndef PARSER_H
 #define PARSER_H
 

@@ -1,3 +1,10 @@
+//  ==============================================================================
+//  Author       : Avni Agarwal
+//  Roll No.     : 2501AI27
+//  ==============================================================================
+
+
+
 What is Assembly?
     Assembly language uses a mnemonic to represent each low-level machine operation or opcod
 
@@ -5,6 +12,19 @@ ISO C89
     Standard C
 Hash Function
     takes strings and other things to get an index according to some formula
+Error
+    prevents code generation and assembly
+Warnings
+    flags sus code but allows completion
+IN THIS CODE THE ERRORS AND WARNINGS ARE:
+    label name not following the naming rules- starting with digit or non alphanumeric stuff
+    mnemonic not in instruction table
+    instruction requiring operand has none
+    instruction requiring no operands has one
+    Trailing arguments or junk at the end of a line
+    Operand is not a valid decimal, octal, hex, or label name
+    non alhpanumeric elements in non comment portion
+
 
 Assembler
     Converts assembly to machine code.
@@ -103,3 +123,6 @@ qs??
     what about pseudo operations?
     what is stored in symbol table?
     will the literal and symbol table be different?
+
+
+

@@ -1,3 +1,13 @@
+//  ==============================================================================
+//  Author       : Avni Agarwal
+//  Roll No.     : 2501AI27
+//  Declaration of Authorship:
+//  I hereby declare that this code is my own original work.
+//  ==============================================================================
+
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
