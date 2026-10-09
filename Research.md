@@ -3,6 +3,9 @@ What is Assembly?
 
 ISO C89
     Standard C
+Hash Function
+    takes strings and other things to get an index according to some formula
+
 Assembler
     Converts assembly to machine code.
     Translation
@@ -16,8 +19,11 @@ Assembler
 
 
 **2 pass assembler**: if it encounters a label it doesnt recognise, it puts it in the symbol table along with the address where the undefined symbol's value has to be placed if encountered again. 
-    First pass: for forward references and generate new opcodes and doing recursion (check ref 2) Symbol table is generated. 
-    Second pass: symbolic opcode to machine understandable opcode. Program is read again and symbol table is used to get corresponding addresses associated with each label. Each instruction s converted to 32 bit machine code. 
+    First pass: 
+        for forward references and generate new opcodes and doing recursion (check ref 2) Symbol table is generated. 
+        The symbol table doesnt contain the mnemonics. only labels and their pc address
+    Second pass: 
+        symbolic opcode to machine understandable opcode. Program is read again and symbol table is used to get corresponding addresses associated with each label. Opcode table is is used to convert each instruction (mnemonic) to 32 bit machine code. (binary)
 Emulator
     program that acts like fake hardware. basically, it will keep track of registers, memory etc.
     runs the binary code given by assembler by activating physical CPU and memory.
@@ -37,9 +43,13 @@ Operand
     data or target value that the instruction acts on. this is not register (add, sub dont require operand. ldc 5 br loop have operand (target value or address))
     can be number or label name
 Label
-    Human readable bookmark given to specific memory address
+    Human readable bookmark given to specific memory address. Location in memory ko doosra naam de diya basically.
     since assembly doesnt have variables, it uses this to give symbolic names to memory addresses.
-    $t0 is not a label though 
+    $t0 is not a label though
+    when a label comes, the pc (index for instruction) points to the address that the label points to (basically the index of the instruction that is labelled by the label)
+Mnemonic
+    action or command that processor has to do. human readable (ldc, add, br, etc) opcode
+
 
 Project Specs:
 
@@ -64,7 +74,7 @@ Project Specs:
             any of these are acceptable
         should issue error warning
 To explore:
-    Hash table to store symbol tables. 
+    Hash table to store symbol tables.
 
 What we have to do:
     Assembler
@@ -78,4 +88,18 @@ https://kshitij-taley19.medium.com/two-pass-assembler-3c193c612cb8
 https://github.com/ayushoriginal/Two-pass-Assembler/blob/master/README.md
 https://www.youtube.com/watch?v=BUZycVrWPa4
 
+STEPS!!
+    For parser:
+        first get the lines
+        add pc
+        remove comments
+        and split lines on : and update the pc as well
+        give error warnings
 
+
+
+qs??
+    do we need to build a loader also?
+    what about pseudo operations?
+    what is stored in symbol table?
+    will the literal and symbol table be different?
