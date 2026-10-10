@@ -24,6 +24,17 @@ IN THIS CODE THE ERRORS AND WARNINGS ARE:
     Trailing arguments or junk at the end of a line
     Operand is not a valid decimal, octal, hex, or label name
     non alhpanumeric elements in non comment portion
+    defining a label that already exists
+    referencing a label in pass 2 that was never defined
+    label in pass 1 but never referenced
+    value over range
+Warnings:
+    ; only line
+    label exceeds 31 chars
+    label redefined
+    unused label
+    label used before defining
+    extra whitespace
 
 
 Assembler
@@ -69,6 +80,8 @@ Label
     when a label comes, the pc (index for instruction) points to the address that the label points to (basically the index of the instruction that is labelled by the label)
 Mnemonic
     action or command that processor has to do. human readable (ldc, add, br, etc) opcode
+Instruction
+    mnemonic+ operand or the final 32-bit compiled binary representation
 
 
 Project Specs:
