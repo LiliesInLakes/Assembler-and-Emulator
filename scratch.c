@@ -7,11 +7,11 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <ctype.h>
 
 
 int main(){
-    char str[]= "; a label on its own";
+    char str[]= " a label on its own";
     char *test;
     test= strtok(str, ";");
     printf("%s", test);
