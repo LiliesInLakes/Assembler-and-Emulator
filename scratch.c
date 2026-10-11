@@ -26,4 +26,11 @@ int main(){
     }
     printf("\n----");
     printf("\n%s----", test3);
+    char lab[10]; // Properly declare an array of characters
+    
+    lab[0] = '\0';
+    if(isalpha((unsigned char)lab[0])){
+        printf("yes");
+    }
+    else{printf("no");}
 }

@@ -1,8 +1,8 @@
-/*  ==============================================================================
-    Author       : Avni Agarwal
+/*  Author       : Avni Agarwal
     Roll No.     : 2501AI27
-    Declaration of Authorship: I hereby declare that this code is my own original work.
-    ==============================================================================
+    Declaration of Authorship:
+    I hereby declare that this code is my own original work.
+
 */
 
 #include <stdio.h>
@@ -96,6 +96,7 @@ static unsigned long mem[MAX_MEM];
 static int     pc = 0;
 static int     halt_seen = 0;
 static char    errlist[MAX_ERR][192];
+static int     errline[MAX_ERR];
 static int     nerr = 0;
 static int     pass2_ran = 0;
 
@@ -130,7 +131,8 @@ char *trim_white_space(char *str) {
 
 static void add_error(int line, const char *msg) {
     if (nerr < MAX_ERR) {
-        sprintf(errlist[nerr], "ERROR: Line %d: %s", line, msg);
+        errline[nerr] = line;
+        sprintf(errlist[nerr], "ERR: Line %d: %s", line, msg);
     }
     nerr++;
 }
@@ -340,7 +342,7 @@ static int resolve_operand(const ParserResult *r, long *val, char *err) {
     int idx;
     if (isalpha((unsigned char)r->operand[0])) {
         if (!is_string_alphanumeric((char *)r->operand)) {
-            sprintf(err, "invalid label '%s' in operand", r->operand);
+            sprintf(err, "undefined label '%s'", r->operand);
             return -1;
         }
         idx = find_symbol(r->operand);
@@ -353,7 +355,8 @@ static int resolve_operand(const ParserResult *r, long *val, char *err) {
         return 1;
     }
     if (!parse_number(r->operand, val)) {
-        sprintf(err, "invalid number '%s'", r->operand);
+        /* not a label, not a valid number: report as an undefined label */
+        sprintf(err, "undefined label '%s'", r->operand);
         return -1;
     }
     return 0;
@@ -372,7 +375,8 @@ static void pass2(FILE *fp) {
     rewind(fp);
     while (read_line(fp, line, sizeof(line), &too_long)) {
         line_no++;
-        parser(line, &r);                 /* same parser; errors seen in pass 1 */
+        if (too_long) continue;               /* already reported in pass 1 */
+        if (parser(line, &r) < 0) continue;   /* syntax error: reported in pass 1 */
         if (r.is_comment_only) continue;
         if (nentries >= MAX_ENTRIES) { add_error(line_no, "too many lines"); return; }
 
@@ -380,25 +384,37 @@ static void pass2(FILE *fp) {
         memset(e, 0, sizeof(*e));
         e->addr = (unsigned long)pc;
         e->sym = r.has_label ? find_symbol(r.label) : -1;
+        if (e->sym >= 0 && syms[e->sym].line != line_no) e->sym = -1; /* duplicate */
 
         if (!r.has_mnemonic) {            /* label-only line */
             sprintf(e->text, "%s:", r.label);
             continue;
         }
-        d = find_instruction(r.mnemonic);
         strcpy(e->text, r.mnemonic);
         if (r.has_operand) { strcat(e->text, " "); strcat(e->text, r.operand); }
+        d = find_instruction(r.mnemonic);
+        if (!d) continue;                 /* unknown mnemonic: reported in pass 1 */
         if (d->opcode == OP_SET) continue;   /* no code generated */
         if (d->opcode == OP_HALT) halt_seen = 1;
+        if (pc >= MAX_MEM) continue;      /* reported in pass 1 */
+
+        /* From here every statement occupies one word, even if it has an
+           error, so later addresses still agree with the symbol table. */
+        if (d->takes_operand != r.has_operand) { mem[pc++] = 0UL; continue; }
 
         v = 0;
         if (d->takes_operand) {
             kind = resolve_operand(&r, &v, err);
-            if (kind < 0) { add_error(line_no, err); continue; }
+            if (kind < 0) {
+                add_error(line_no, d->opcode == OP_DATA ? "invalid DATA value" : err);
+                mem[pc++] = 0UL;
+                continue;
+            }
             if (d->opcode == OP_DATA) {
                 if (sizeof(long) > 4 &&
                     (v < -2147483647L - 1L || v > (long)MASK32)) {
-                    add_error(line_no, "data value out of 32-bit range");
+                    add_error(line_no, "invalid DATA value");
+                    mem[pc++] = 0UL;
                     continue;
                 }
             } else {
@@ -410,6 +426,7 @@ static void pass2(FILE *fp) {
                 }
                 if (v < -8388608L || v > 16777215L) {
                     add_error(line_no, "operand out of 24-bit range");
+                    mem[pc++] = 0UL;
                     continue;
                 }
             }
@@ -446,7 +463,16 @@ static void write_log(const char *path) {
     }
     if (nerr > 0) {
         fprintf(f, "--- errors ---\n");
-        for (i = 0; i < nerr && i < MAX_ERR; i++) fprintf(f, "%s\n", errlist[i]);
+        {   /* stable insertion sort of error indices by source line */
+            int ord[MAX_ERR], n = nerr < MAX_ERR ? nerr : MAX_ERR, j, t;
+            for (i = 0; i < n; i++) {
+                t = i;
+                for (j = i; j > 0 && errline[ord[j - 1]] > errline[t]; j--)
+                    ord[j] = ord[j - 1];
+                ord[j] = t;
+            }
+            for (i = 0; i < n; i++) fprintf(f, "%s\n", errlist[ord[i]]);
+        }
     }
     fprintf(f, "--- labels ---\n");
     for (i = 0; i < nsyms; i++) fprintf(f, "%s : %d\n", syms[i].name, syms[i].value);
@@ -507,11 +533,11 @@ int main(int argc, char **argv) {
     if (dot && (!slash || dot > slash)) *dot = '\0';
 
     pass1(fp);
-    if (nerr == 0) pass2(fp);
+    pass2(fp);                 /* always: report pass-2 errors too */
     fclose(fp);
 
     sprintf(path, "%s.log", base); write_log(path);
-    if (pass2_ran) { sprintf(path, "%s.lst", base); write_listing(path); }
+    sprintf(path, "%s.lst", base); write_listing(path);
     if (nerr == 0) { sprintf(path, "%s.o", base);   write_object(path); }
 
     if (nerr == 0) printf("Program assembled. Output: %s.log, %s.lst, %s.o\n", base, base, base);
