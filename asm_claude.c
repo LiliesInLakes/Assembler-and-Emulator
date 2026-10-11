@@ -3,17 +3,6 @@
     Roll No.     : 2501AI27
     Declaration of Authorship: I hereby declare that this code is my own original work.
     ==============================================================================
-
-    Two-pass assembler for the IITP-style instruction set (incl. mul and div).
-
-    Usage:   ./asm prog.asm
-    Output:  prog.log   (warnings, errors, label table, status)
-             prog.lst   (address, 32-bit word, source text, per-line warnings)
-             prog.o     (binary; one 32-bit word per instruction, little-endian,
-                         code starts at address 0)
-
-    Word format: bottom 8 bits = opcode, upper 24 bits = signed operand.
-    Build:   gcc -std=c89 -pedantic -W -Wall asm.c -o asm
 */
 
 #include <stdio.h>
