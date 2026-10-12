@@ -31,10 +31,12 @@ typedef struct {
     char *label;
     char *mnemonic;
     char *operand;
+    char *error;
     int has_label;
     int has_mnemonic;
     int has_operand;
     int is_comment_only;
+
 }ParserResult;
 
 
@@ -103,7 +105,7 @@ int parser(const char* line, ParserResult* result){
     result->has_mnemonic = 0;
     result->has_operand = 0;
     result->is_comment_only = 0;
-
+    result->error = NULL;
   
 
     char *line_cpy;
@@ -115,7 +117,7 @@ int parser(const char* line, ParserResult* result){
     len_line= strlen(line);
     line_cpy= malloc(len_line+1);
     strncpy(line_cpy, line, len_line);
-    // strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there
+    /* strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there*/
     comment= strchr(line_cpy,  ';');
     if(comment){
         *comment= '\0';
@@ -127,35 +129,42 @@ int parser(const char* line, ParserResult* result){
         return 0; //comment only line
     }
 
-    //now the line_cpy doesnt contain any comments
+    /*now the line_cpy doesnt contain any comments*/
+    line_cpy= trim_white_space(line_cpy);
     char * colon_pos= strchr(line_cpy, ':');
     if(colon_pos){
         *colon_pos= '\0';
-    }
-    char *lab= trim_white_space(line_cpy);
-    if(isalpha((unsigned char)lab[0]) && is_string_alphanumeric(lab+1)){
-        strcpy(result->label, lab);
-        result->has_label=1;
+        if(isalpha((unsigned char)line_cpy[0]) && is_string_alphanumeric(line_cpy+1)){
+            result->label= line_cpy;
+            result->has_label=1;
+        }
+        else{
+            result->error= "invalid label name (must be alphanumeric, start with a letter)";
+            return -1;
+        }
+        /*move past the colon*/
+        line_cpy= trim_white_space(colon_pos+1);
+        if(*line_cpy== '\0'){
+            return 0; /*label only line*/
+        }
     }
 
-    //need to check errors in label (empty label or non alphanumeric or illegal naming)
-
-    line_cpy= colon_pos+1; //move past the colon
-    line_cpy= trim_white_space(line_cpy);
-    if(*line_cpy== '\0'){
-        return 0; //label only line
-    }
-    //extracting mnemonic
+    /*extracting mnemonic*/
     result->mnemonic= strtok(line_cpy, " \t\r\n");
     if(result->mnemonic){
         result->has_mnemonic=1;
         char *token = strtok(NULL, " \t\r\n;");
         if (token) {
-            strcpy(result->operand, trim_white_space(token));
+            result->operand= trim_white_space(token);
             result->has_operand = 1;
         }
     }
 
+    line_cpy= trim_white_space(line_cpy);
+    if(*line_cpy!= '\0'){
+        result->error= "unexpected extra text after operand";
+        return -1;
+    }
     return 0;
 }
 
@@ -183,6 +192,7 @@ int main(){
     } else {
         printf("No label found.\n");
     }
+    printf("%s", res.error);
 
     return 0;
 }
