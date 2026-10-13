@@ -101,6 +101,7 @@ int parser(const char* line, ParserResult* result){
     int len_line;
     char * colon_pos;
     char *token;
+    char *head_of_line_cpy;
     colon_pos= NULL;
 
     if (!line || !result) return -1;
@@ -121,6 +122,7 @@ int parser(const char* line, ParserResult* result){
      to find first occurence of ';'*/
     len_line= strlen(line);
     line_cpy= malloc(len_line+1);
+    head_of_line_cpy= line_cpy;
     strncpy(line_cpy, line, len_line);
     /* strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there*/
     comment= strchr(line_cpy,  ';');
@@ -131,7 +133,7 @@ int parser(const char* line, ParserResult* result){
     line_cpy= trim_white_space(line_cpy);
     if (*line_cpy == '\0') {
         result->is_comment_only = 1;
-        free(line_cpy);
+        free(head_of_line_cpy);
         return 0; /*comment only line*/
     }
 
@@ -146,13 +148,13 @@ int parser(const char* line, ParserResult* result){
         }
         else{
             result->error= "invalid label name (must be alphanumeric, start with a letter)";
-            free(line_cpy);
+            free(head_of_line_cpy);
             return -1;
         }
         /*move past the colon*/
         line_cpy= trim_white_space(colon_pos+1);
         if(*line_cpy== '\0'){
-            free(line_cpy);
+            free(head_of_line_cpy);
             return 0; /*label only line*/
         }
     }
@@ -172,10 +174,10 @@ int parser(const char* line, ParserResult* result){
     if(*line_cpy!= '\0'){
         printf("%s\n", line_cpy);
         result->error= "unexpected extra text after operand";
-        free(line_cpy);
+        free(head_of_line_cpy);
         return -1;
     }
-    free(line_cpy);
+    free(head_of_line_cpy);
     return 0;
 }
 
@@ -195,7 +197,7 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 int main(int argc, char **argv){
     FILE* fptr;
     ParserResult res;
-
+    const char* line_of_asm;
     if(argc==2){
         fptr= fopen(argv[1], "r");
     }
@@ -205,11 +207,9 @@ int main(int argc, char **argv){
     }
     if (fptr == NULL) {
         printf("The file is not opened.");
+        return 0;
     }
-    return 0;
-   
-    printf("%s %s %s \n%d %d %d", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.is_comment_only);
-    printf("%s", res.error);
+    while(fgets(line_of_asm, 64*sizeof(char), fptr)){
 
     return 0;
 }
