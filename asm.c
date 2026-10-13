@@ -197,7 +197,9 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 int main(int argc, char **argv){
     FILE* fptr;
     ParserResult res;
-    const char* line_of_asm;
+    char line_of_asm[64];
+
+
     if(argc==2){
         fptr= fopen(argv[1], "r");
     }
@@ -209,7 +211,14 @@ int main(int argc, char **argv){
         printf("The file is not opened.");
         return 0;
     }
-    while(fgets(line_of_asm, 64*sizeof(char), fptr)){
+    else{printf("file is opening\n");}
+        while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
+        printf("going into parser");
+        printf("line is %s\n", line_of_asm);
+        parser(line_of_asm, &res);
+        printf("%s %s %s \n%d %d %d", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.is_comment_only);
+        printf("%s\n", res.error);
+    }
 
     return 0;
 }
