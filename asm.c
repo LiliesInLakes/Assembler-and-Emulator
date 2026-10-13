@@ -31,7 +31,7 @@ typedef struct {
     char *label;
     char *mnemonic;
     char *operand;
-    char *error;
+    const char *error;
     int has_label;
     int has_mnemonic;
     int has_operand;
@@ -96,6 +96,13 @@ char* trim_white_space(char *str){
 
 int parser(const char* line, ParserResult* result){
 
+    char *line_cpy;
+    char *comment;
+    int len_line;
+    char * colon_pos;
+    char *token;
+    colon_pos= NULL;
+
     if (!line || !result) return -1;
 
     result->label = NULL;
@@ -108,12 +115,10 @@ int parser(const char* line, ParserResult* result){
     result->error = NULL;
   
 
-    char *line_cpy;
-    char *comment;
+
     /*gets is tricky because it will scan until enter is there. so if variable is small, it'll overflow and corrupt the things stored after it. same with fscanf and if it expects a datatype and gets something else itll go in infinite loop. 
     fgets +strtok/sscanf: fgets asks for array size beforehand so no overflow. sscanf to extract 
      to find first occurence of ';'*/
-    int len_line;
     len_line= strlen(line);
     line_cpy= malloc(len_line+1);
     strncpy(line_cpy, line, len_line);
@@ -126,12 +131,13 @@ int parser(const char* line, ParserResult* result){
     line_cpy= trim_white_space(line_cpy);
     if (*line_cpy == '\0') {
         result->is_comment_only = 1;
-        return 0; //comment only line
+        free(line_cpy);
+        return 0; /*comment only line*/
     }
 
     /*now the line_cpy doesnt contain any comments*/
     line_cpy= trim_white_space(line_cpy);
-    char * colon_pos= strchr(line_cpy, ':');
+    colon_pos= strchr(line_cpy, ':');
     if(colon_pos){
         *colon_pos= '\0';
         if(isalpha((unsigned char)line_cpy[0]) && is_string_alphanumeric(line_cpy+1)){
@@ -140,11 +146,13 @@ int parser(const char* line, ParserResult* result){
         }
         else{
             result->error= "invalid label name (must be alphanumeric, start with a letter)";
+            free(line_cpy);
             return -1;
         }
         /*move past the colon*/
         line_cpy= trim_white_space(colon_pos+1);
         if(*line_cpy== '\0'){
+            free(line_cpy);
             return 0; /*label only line*/
         }
     }
@@ -153,7 +161,7 @@ int parser(const char* line, ParserResult* result){
     result->mnemonic= strtok(line_cpy, " \t\r\n");
     if(result->mnemonic){
         result->has_mnemonic=1;
-        char *token = strtok(NULL, " \t\r\n;");
+        token = strtok(NULL, " \t\r\n;");
         if (token) {
             result->operand= trim_white_space(token);
             result->has_operand = 1;
@@ -162,9 +170,12 @@ int parser(const char* line, ParserResult* result){
 
     line_cpy= trim_white_space(line_cpy);
     if(*line_cpy!= '\0'){
+        printf("%s\n", line_cpy);
         result->error= "unexpected extra text after operand";
+        free(line_cpy);
         return -1;
     }
+    free(line_cpy);
     return 0;
 }
 
@@ -181,17 +192,23 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 
 
 
-int main(){
+int main(int argc, char **argv){
+    FILE* fptr;
     ParserResult res;
-    const char *test_line = "LOOP: MOV AX, BX ; this is a comment";
 
-    parser(test_line, &res);
-
-    if (res.label) {
-        printf("Label found: %s\n", res.label);
-    } else {
-        printf("No label found.\n");
+    if(argc==2){
+        fptr= fopen(argv[1], "r");
     }
+    else{
+        printf("invalid input to assembler\n");
+        return 0;
+    }
+    if (fptr == NULL) {
+        printf("The file is not opened.");
+    }
+    return 0;
+   
+    printf("%s %s %s \n%d %d %d", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.is_comment_only);
     printf("%s", res.error);
 
     return 0;
