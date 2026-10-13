@@ -110,9 +110,9 @@ int parser(const char* line, ParserResult* result){
 
     char *line_cpy;
     char *comment;
-    //gets is tricky because it will scan until enter is there. so if variable is small, it'll overflow and corrupt the things stored after it. same with fscanf and if it expects a datatype and gets something else itll go in infinite loop. 
-    //fgets +strtok/sscanf: fgets asks for array size beforehand so no overflow. sscanf to extract 
-    // to find first occurence of ';'
+    /*gets is tricky because it will scan until enter is there. so if variable is small, it'll overflow and corrupt the things stored after it. same with fscanf and if it expects a datatype and gets something else itll go in infinite loop. 
+    fgets +strtok/sscanf: fgets asks for array size beforehand so no overflow. sscanf to extract 
+     to find first occurence of ';'*/
     int len_line;
     len_line= strlen(line);
     line_cpy= malloc(len_line+1);
