@@ -66,7 +66,9 @@ static const InstructionDef inst_table[] = {
     {"div",  20, 0},
     {NULL,   -1, 0}
 };
-int nerr=0;
+
+static Symbol *symbol_table;
+static int nerr = 0;
 
 
 int is_string_alphanumeric(char *str){
@@ -97,20 +99,19 @@ char* trim_white_space(char *str){
 
 int parser(const char* line, ParserResult* result){
 
-    char *line_cpy;
-    char *comment;
+    char* line_cpy;
+    char* comment;
     int len_line;
-    char * colon_pos;
-    char *token;
-    char *head_of_line_cpy;
-    colon_pos= NULL;
+    char* colon_pos;
+    char* token;
+    colon_pos = NULL;
 
     if (!line || !result) return -1;
 
     result->label = NULL;
     result->mnemonic = NULL;
     result->operand = NULL;
-    result->has_label=0;
+    result->has_label = 0;
     result->has_mnemonic = 0;
     result->has_operand = 0;
     result->is_comment_only = 0;
@@ -121,12 +122,16 @@ int parser(const char* line, ParserResult* result){
     /*gets is tricky because it will scan until enter is there. so if variable is small, it'll overflow and corrupt the things stored after it. same with fscanf and if it expects a datatype and gets something else itll go in infinite loop. 
     fgets +strtok/sscanf: fgets asks for array size beforehand so no overflow. sscanf to extract 
      to find first occurence of ';'*/
-    len_line= strlen(line);
-    line_cpy= malloc(len_line+1);
-    head_of_line_cpy= line_cpy;
+    len_line = strlen(line);
+    line_cpy = malloc(len_line+1);
+    if(line_cpy == NULL){
+        printf("memory not assigned to line_cpy in parser\n");
+        return -1;
+    }
     strncpy(line_cpy, line, len_line);
+    line_cpy[len_line] = '\0';
     /* strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there*/
-    comment= strchr(line_cpy,  ';');
+    comment = strchr(line_cpy,  ';');
     if(comment){
         *comment= '\0';
     }
@@ -186,6 +191,9 @@ int parser(const char* line, ParserResult* result){
 
 const InstructionDef *find_instruction(const char *mnemonic) {
     int i = 0;
+    if(mnemonic == NULL){
+        return NULL;
+    }
     while (inst_table[i].mnemonic != NULL) {
         if (strcmp(inst_table[i].mnemonic, mnemonic) == 0) {
             return &inst_table[i];
@@ -195,7 +203,7 @@ const InstructionDef *find_instruction(const char *mnemonic) {
     return NULL;
 }
 
-void p1(FILE* fptr){
+void pass1(FILE* fptr){
     char line_of_asm[64];
     ParserResult res;
     InstructionDef* pos_of_instruction;
@@ -220,7 +228,9 @@ void p1(FILE* fptr){
             res.error = "mnemonic's operand requirement is unfulfilled"; 
             nerr++;  
         }
+        /*checked operand is req, now need to check if operand is valid*/
 
+        /*what is operand is not valid*/
         /*error checks, errors like???? more or less number of operands, not a number for operand. finding if instruction exists in the instruction table. */
     }
     /*will have to add error checks and also populate symbol table*/
