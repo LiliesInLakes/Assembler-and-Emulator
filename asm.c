@@ -66,6 +66,7 @@ static const InstructionDef inst_table[] = {
     {"div",  20, 0},
     {NULL,   -1, 0}
 };
+int nerr=0;
 
 
 int is_string_alphanumeric(char *str){
@@ -148,6 +149,7 @@ int parser(const char* line, ParserResult* result){
         }
         else{
             result->error= "invalid label name (must be alphanumeric, start with a letter)";
+            nerr++;
             free(head_of_line_cpy);
             return -1;
         }
@@ -174,6 +176,7 @@ int parser(const char* line, ParserResult* result){
     if(*line_cpy != '\0'){
         printf("%s\n", line_cpy);
         result->error = "unexpected extra text after operand";
+        nerr++;
         free(head_of_line_cpy);
         return -1;
     }
@@ -205,6 +208,7 @@ void p1(FILE* fptr){
         pos_of_instruction= find_instruction(res.mnemonic);
         if(!pos_of_instruction){
             res.error = "Unknown mnemonic";
+            nerr++;
             continue;
         }
         /*also, opernad has comma i think. need to check and do we need to add erro if operands are non alphanumeric?*/
@@ -213,8 +217,8 @@ void p1(FILE* fptr){
         if instruction doesnt req operand bu res has operand: error
         if instruction doesnt req operand and res doesnt have operand : put in symbol table*/
         if(pos_of_instruction->takes_operand ^ res.has_operand){
-            res.error = "mnemonic's operand requirement is unfulfilled";
-            
+            res.error = "mnemonic's operand requirement is unfulfilled"; 
+            nerr++;  
         }
 
         /*error checks, errors like???? more or less number of operands, not a number for operand. finding if instruction exists in the instruction table. */
