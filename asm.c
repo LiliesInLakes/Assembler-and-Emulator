@@ -195,13 +195,31 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 void p1(FILE* fptr){
     char line_of_asm[64];
     ParserResult res;
+    InstructionDef* pos_of_instruction;
     while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
         printf("going into parser");
         printf("line is %s\n", line_of_asm);
         parser(line_of_asm, &res);
         printf("%s %s %s \n%d %d %d", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.is_comment_only);
         printf("%s\n", res.error);
+        pos_of_instruction= find_instruction(res.mnemonic);
+        if(!pos_of_instruction){
+            res.error= "Unknown mnemonic";
+            continue;
+        }
+        /*also, opernad has comma i think. need to check and do we need to add erro if operands are non alphanumeric?*/
+        /*if instructionr reqs operand and res has operand: put in symbol table
+        if instruction reqs operand but res doesnt have operand: error
+        if instruction doesnt req operand bu res has operand: error
+        if instruction doesnt req operand and res doesnt have operand : put in symbol table*/
+        if(pos_of_instruction->takes_operand ^ res.has_operand){
+            res.error= "mnemonic's operand requirement is unfulfilled";
+            
+        }
+
+        /*error checks, errors like???? more or less number of operands, not a number for operand. finding if instruction exists in the instruction table. */
     }
+    /*will have to add error checks and also populate symbol table*/
 }
 
 int main(int argc, char **argv){
