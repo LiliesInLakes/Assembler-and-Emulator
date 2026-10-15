@@ -160,9 +160,9 @@ int parser(const char* line, ParserResult* result){
     }
 
     /*extracting mnemonic*/
-    result->mnemonic= strtok(line_cpy, " \t\r\n");
+    result->mnemonic = strtok(line_cpy, " \t\r\n");
     if(result->mnemonic){
-        result->has_mnemonic=1;
+        result->has_mnemonic = 1;
         token = strtok(NULL, " \t\r\n;");
         if (token) {
             result->operand= trim_white_space(token);
@@ -171,9 +171,9 @@ int parser(const char* line, ParserResult* result){
     }
 
     line_cpy= trim_white_space(line_cpy);
-    if(*line_cpy!= '\0'){
+    if(*line_cpy != '\0'){
         printf("%s\n", line_cpy);
-        result->error= "unexpected extra text after operand";
+        result->error = "unexpected extra text after operand";
         free(head_of_line_cpy);
         return -1;
     }
@@ -204,7 +204,7 @@ void p1(FILE* fptr){
         printf("%s\n", res.error);
         pos_of_instruction= find_instruction(res.mnemonic);
         if(!pos_of_instruction){
-            res.error= "Unknown mnemonic";
+            res.error = "Unknown mnemonic";
             continue;
         }
         /*also, opernad has comma i think. need to check and do we need to add erro if operands are non alphanumeric?*/
@@ -213,7 +213,7 @@ void p1(FILE* fptr){
         if instruction doesnt req operand bu res has operand: error
         if instruction doesnt req operand and res doesnt have operand : put in symbol table*/
         if(pos_of_instruction->takes_operand ^ res.has_operand){
-            res.error= "mnemonic's operand requirement is unfulfilled";
+            res.error = "mnemonic's operand requirement is unfulfilled";
             
         }
 
@@ -225,8 +225,8 @@ void p1(FILE* fptr){
 int main(int argc, char **argv){
     FILE* fptr;
     
-    if(argc==2){
-        fptr= fopen(argv[1], "r");
+    if(argc == 2){
+        fptr = fopen(argv[1], "r");
     }
     else{
         printf("invalid input to assembler\n");
