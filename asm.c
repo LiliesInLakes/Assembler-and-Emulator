@@ -40,7 +40,7 @@ typedef struct {
 }ParserResult;
 
 
-
+/*in last column, 1 = takes operand, 0 means no operand*/
 static const InstructionDef inst_table[] = {
     {"data", -1, 1}, 
     {"ldc",   0, 1},
@@ -363,6 +363,7 @@ void pass2(FILE* fptr){
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
 
+
     while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
         if(debug){
             printf("pass2: line: %s\n", line_of_asm);
@@ -379,8 +380,11 @@ void pass2(FILE* fptr){
                 printf("pass1: res.mnemonic true\n");
             }
             pos_of_instruction = find_instruction(res.mnemonic);
-            /*take operand according to instruction table else ignore. 
-            convert operand to number. else treat as label and find in symbol table. 
+            if(pos_of_instruction->takes_operand && res.has_operand){
+                /*convert operand to number else treat as label and find in symbol table.*/
+            }
+            /* if this if is not satisfied then it will have already raised an error in pass1. 
+            but then what about opcode??? 
             find opcode
             Write the listing (address, machine word in hex, source line) as you go, and write the binary object file with fwrite only if nerr == 0 at the end.
             */
