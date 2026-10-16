@@ -68,9 +68,88 @@ static const InstructionDef inst_table[] = {
 };
 
 static Symbol *symbol_table;
+static int nsyms=0;
 static int nerr = 0;
 FILE *log_file = NULL;
 int debug=0;
+
+
+int find_symbol(char *label){
+    int i;
+
+    if(label == NULL){
+        return -1;
+    }
+
+    for(i = 0 ; i < nsyms ; i++){
+        if(debug){
+            printf("find_symbol: symbol_table[i].name: %s, label: %s\n", symbol_table[i].name, label);
+        }
+        if(strcmp(symbol_table[i].name, label) == 0){
+            if(debug){
+                printf("find_symbol: returning 1\n");
+            }
+            return 1;
+        }
+    }
+    if(debug){
+            printf("find symbol: return 0\n");
+    }
+    return 0;
+}
+
+
+int add_to_symbol_table(ParserResult res, int pc){
+    Symbol temp;
+    Symbol *tmp;
+    if(res.label == NULL){
+        return -1;
+    }
+    if(find_symbol(res.label) == 1){
+        if(debug){
+            printf("found label in symbol table so returning 0\n");
+        }
+        return 0;
+    }
+    tmp = realloc(symbol_table, sizeof(Symbol)*(nsyms+1));
+    if(!tmp){
+        return -1;
+    }
+    symbol_table= tmp;
+    if(debug){
+        printf("add_to_symbol_table: realloc done\n");
+    }
+    strcpy(temp.name, res.label);
+    temp.value= pc;
+    if(debug){
+        printf("add_to_symbol_table: temp created\n");
+    }
+    symbol_table[nsyms] = temp;
+    if(debug){
+        printf("added to symbol table\n");
+    }
+    nsyms++;
+    if(debug){
+            printf("returning 1 in add_to_symbol_table\n");
+    }
+    return 1;
+}
+
+
+const InstructionDef *find_instruction(const char *mnemonic) {
+    int i = 0;
+    if(mnemonic == NULL){
+        return NULL;
+    }
+    while (inst_table[i].mnemonic != NULL) {
+        if (strcmp(inst_table[i].mnemonic, mnemonic) == 0) {
+            return &inst_table[i];
+        }
+        i++;
+    }
+    return NULL;
+}
+
 
 void add_error(const char* line, const char* error, ParserResult res){
     if(log_file){
@@ -89,6 +168,7 @@ int is_string_alphanumeric(char *str){
     }
     return 1;
 }
+
 
 char* trim_white_space(char* str){
     char* end;
@@ -143,7 +223,7 @@ int parser(const char* line, ParserResult* result){
     strncpy(line_cpy, line, len_line);
     line_cpy[len_line] = '\0';
     if(debug){
-        printf("the line_cpy is parser is %s\n", line_cpy);
+        printf("parser: line_cpy: %s\n", line_cpy);
     }
     /* strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there*/
     comment = strchr(line_cpy,  ';');
@@ -207,35 +287,41 @@ int parser(const char* line, ParserResult* result){
     return 1;
 }
 
-InstructionDef *find_instruction(const char *mnemonic) {
-    int i = 0;
-    if(mnemonic == NULL){
-        return NULL;
+
+void print_symbol_table(FILE *out){
+    int i;
+    if(out == NULL){
+        return;
     }
-    while (inst_table[i].mnemonic != NULL) {
-        if (strcmp(inst_table[i].mnemonic, mnemonic) == 0) {
-            return &inst_table[i];
-        }
-        i++;
+    fprintf(out, "Symbol table (%d entries)\n", nsyms);
+    fprintf(out, "%-20s %s\n", "LABEL", "ADDRESS");
+    for(i = 0; i < nsyms; i++){
+        fprintf(out, "%-20s %08X\n", symbol_table[i].name, symbol_table[i].value);
     }
-    return NULL;
 }
 
 void pass1(FILE* fptr){
+    int pc = 0;
     char line_of_asm[64];
     ParserResult res;
     int return_of_parser;
-    InstructionDef* pos_of_instruction;
+    const InstructionDef* pos_of_instruction;
+
     while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
         if(debug){
-            printf("going into parser");
-            printf("line is %s\n", line_of_asm);
+            printf("pass1: line: %s\n", line_of_asm);
         }
         return_of_parser = parser(line_of_asm, &res);
-        if(!return_of_parser){
-            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further*/
+        if(!return_of_parser || res.is_comment_only){
+            if(debug){
+                printf("pass1: !return_of_parser || res.is_comment_only true\n");
+            }
+            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further. if it is all comments then also same*/
         }
         if(res.mnemonic){
+            if(debug){
+                printf("pass1: res.mnemonic true\n");
+            }
             pos_of_instruction = find_instruction(res.mnemonic);
             if(!pos_of_instruction){
                 res.error = "Unknown mnemonic";
@@ -250,13 +336,23 @@ void pass1(FILE* fptr){
                 /*not doing continue here because we can still populate the symbol table and see if there are more errors. If */
             }
         }
-        /*checked operand is req, now need to check if operand is valid*/
-
-        /*what is operand is not valid*/
-        /*error checks, errors like???? not a number for operand. finding if instruction exists in the instruction table. */
+        if(debug){
+            printf("going to populate symbol table now\n");
+        }
+        if(res.has_label && !add_to_symbol_table(res, pc)){
+            if(debug){
+                printf("add to symbol table gave 0\n");
+            }
+            add_error(line_of_asm, "duplicate label", res);
+            nerr++;
+        }
+        
+        if(res.has_mnemonic){
+            pc++;
+        }
     }
+    print_symbol_table(stdout);
     return;
-    /*will have to add error checks and also populate symbol table*/
 }
 
 int main(int argc, char **argv){
