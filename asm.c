@@ -302,7 +302,7 @@ void print_symbol_table(FILE *out){
 
 void pass1(FILE* fptr){
     int pc = 0;
-    char line_of_asm[64];
+    char line_of_asm[64]; /*then what is the point of keeping parserResult as dynamic if line is static ;(*/
     ParserResult res;
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
@@ -352,6 +352,41 @@ void pass1(FILE* fptr){
         }
     }
     print_symbol_table(stdout);
+    return;
+}
+
+
+void pass2(FILE* fptr){
+    int pc = 0;
+    char line_of_asm[64];
+    ParserResult res;
+    int return_of_parser;
+    const InstructionDef* pos_of_instruction;
+
+    while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
+        if(debug){
+            printf("pass2: line: %s\n", line_of_asm);
+        }
+        return_of_parser = parser(line_of_asm, &res);
+        if(!return_of_parser || res.is_comment_only || !res.has_mnemonic){
+            if(debug){
+                printf("pass2: !return_of_parser || res.is_comment_only true\n");
+            }
+            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further. if it is all comments then also same*/
+        }
+        if(res.mnemonic){
+            if(debug){
+                printf("pass1: res.mnemonic true\n");
+            }
+            pos_of_instruction = find_instruction(res.mnemonic);
+            /*take operand according to instruction table else ignore. 
+            convert operand to number. else treat as label and find in symbol table. 
+            find opcode
+            Write the listing (address, machine word in hex, source line) as you go, and write the binary object file with fwrite only if nerr == 0 at the end.
+            */
+            pc++;
+        }
+    }
     return;
 }
 
