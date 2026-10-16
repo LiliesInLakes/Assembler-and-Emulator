@@ -7,7 +7,7 @@
 */
 
 
-
+/*switch debug, 0 hai toh printing nahi hogi. also, strdub karlo toh theek ho jaayega*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,11 +69,20 @@ static const InstructionDef inst_table[] = {
 
 static Symbol *symbol_table;
 static int nerr = 0;
+FILE *log_file = NULL;
+int debug=0;
+
+void add_error(const char* line, const char* error, ParserResult res){
+    if(log_file){
+        fprintf(log_file, "%s       | ERR: %s\n", line, error);
+        fprintf(log_file, "     %s %s %s\n       %d %d %d %d\n", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.has_operand, res.is_comment_only);
+    }
+}
 
 
 int is_string_alphanumeric(char *str){
     int i;
-    for(i=0; str[i]!='\0'; i++){
+    for(i = 0 ; str[i] != '\0' ; i++){
         if(!isalnum((unsigned char)str[i])){
             return 0;
         }
@@ -81,17 +90,17 @@ int is_string_alphanumeric(char *str){
     return 1;
 }
 
-char* trim_white_space(char *str){
+char* trim_white_space(char* str){
     char* end;
-    while(*str && isspace((unsigned char)*str)){
+    while(*str && isspace((unsigned char)* str)){
         str++;
     }
-    if(*str!=0){
-        end= str+ strlen(str)-1;
-        while(end>str && isspace((unsigned char)*end)){
+    if(*str != 0){
+        end = str + strlen(str) - 1;
+        while(end > str && isspace((unsigned char)* end)){
             end--;
         }
-        *++end= '\0';
+        *++end = '\0';
     }
     return str;
 }
@@ -103,6 +112,7 @@ int parser(const char* line, ParserResult* result){
     char* comment;
     int len_line;
     char* colon_pos;
+    char* head_of_linecpy;
     char* token;
     colon_pos = NULL;
 
@@ -124,72 +134,82 @@ int parser(const char* line, ParserResult* result){
      to find first occurence of ';'*/
     len_line = strlen(line);
     line_cpy = malloc(len_line+1);
+    head_of_linecpy= line_cpy;
     if(line_cpy == NULL){
         printf("memory not assigned to line_cpy in parser\n");
-        return -1;
+        free(head_of_linecpy);
+        return 0;
     }
     strncpy(line_cpy, line, len_line);
     line_cpy[len_line] = '\0';
+    if(debug){
+        printf("the line_cpy is parser is %s\n", line_cpy);
+    }
     /* strtok(line_cpy, ";"); cant use strtok here because if ; is the first element, it will skip it. so using strchr to find first occurence and putting a \0 there*/
     comment = strchr(line_cpy,  ';');
     if(comment){
-        *comment= '\0';
+        *comment = '\0';
     }
 
-    line_cpy= trim_white_space(line_cpy);
+    line_cpy = trim_white_space(line_cpy);
     if (*line_cpy == '\0') {
         result->is_comment_only = 1;
-        free(head_of_line_cpy);
-        return 0; /*comment only line*/
+        free(head_of_linecpy);
+        return 1; /*comment only line*/
     }
 
     /*now the line_cpy doesnt contain any comments*/
-    line_cpy= trim_white_space(line_cpy);
-    colon_pos= strchr(line_cpy, ':');
+    line_cpy = trim_white_space(line_cpy);
+    colon_pos = strchr(line_cpy, ':');
     if(colon_pos){
-        *colon_pos= '\0';
+        *colon_pos = '\0';
         if(isalpha((unsigned char)line_cpy[0]) && is_string_alphanumeric(line_cpy+1)){
-            result->label= line_cpy;
-            result->has_label=1;
+            result->label = strdup(line_cpy);
+            result->has_label = 1;
         }
         else{
-            result->error= "invalid label name (must be alphanumeric, start with a letter)";
+            result->error = "invalid label name (must be alphanumeric, start with a letter)";
+            add_error(line, result->error, *result);
             nerr++;
-            free(head_of_line_cpy);
-            return -1;
+            free(head_of_linecpy);
+            return 0;
         }
         /*move past the colon*/
-        line_cpy= trim_white_space(colon_pos+1);
-        if(*line_cpy== '\0'){
-            free(head_of_line_cpy);
-            return 0; /*label only line*/
+        line_cpy = trim_white_space(colon_pos+1);
+        if(*line_cpy == '\0'){
+            free(head_of_linecpy);
+            return 1; /*label only line*/
         }
     }
 
     /*extracting mnemonic*/
-    result->mnemonic = strtok(line_cpy, " \t\r\n");
-    if(result->mnemonic){
+    token = strtok(line_cpy, " \t\r\n");
+    if(token){
+        result->mnemonic= strdup(token);
         result->has_mnemonic = 1;
         token = strtok(NULL, " \t\r\n;");
         if (token) {
-            result->operand= trim_white_space(token);
+            /*need to check operand is number here only*/
+
+            result->operand = strdup(trim_white_space(token));
             result->has_operand = 1;
         }
+        /*checking if text exists after operand*/
+        token = strtok(NULL, " \t\r\n;");
+        if(token){
+            if(debug){printf("adding unexpected extra text after operand. the text is %s\n", line_cpy);}
+            result->error = "unexpected extra text after operand";
+            add_error(line, result->error, *result);
+            nerr++;
+            free(head_of_linecpy);
+            return 0;
+        }
     }
-
-    line_cpy= trim_white_space(line_cpy);
-    if(*line_cpy != '\0'){
-        printf("%s\n", line_cpy);
-        result->error = "unexpected extra text after operand";
-        nerr++;
-        free(head_of_line_cpy);
-        return -1;
-    }
-    free(head_of_line_cpy);
-    return 0;
+    free(head_of_linecpy);
+    return 1;
 }
 
-const InstructionDef *find_instruction(const char *mnemonic) {
+InstructionDef *find_instruction(const char *mnemonic) {
     int i = 0;
     if(mnemonic == NULL){
         return NULL;
@@ -206,39 +226,47 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 void pass1(FILE* fptr){
     char line_of_asm[64];
     ParserResult res;
+    int return_of_parser;
     InstructionDef* pos_of_instruction;
     while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
-        printf("going into parser");
-        printf("line is %s\n", line_of_asm);
-        parser(line_of_asm, &res);
-        printf("%s %s %s \n%d %d %d", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.is_comment_only);
-        printf("%s\n", res.error);
-        pos_of_instruction= find_instruction(res.mnemonic);
-        if(!pos_of_instruction){
-            res.error = "Unknown mnemonic";
-            nerr++;
-            continue;
+        if(debug){
+            printf("going into parser");
+            printf("line is %s\n", line_of_asm);
         }
-        /*also, opernad has comma i think. need to check and do we need to add erro if operands are non alphanumeric?*/
-        /*if instructionr reqs operand and res has operand: put in symbol table
-        if instruction reqs operand but res doesnt have operand: error
-        if instruction doesnt req operand bu res has operand: error
-        if instruction doesnt req operand and res doesnt have operand : put in symbol table*/
-        if(pos_of_instruction->takes_operand ^ res.has_operand){
-            res.error = "mnemonic's operand requirement is unfulfilled"; 
-            nerr++;  
+        return_of_parser = parser(line_of_asm, &res);
+        if(!return_of_parser){
+            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further*/
+        }
+        if(res.mnemonic){
+            pos_of_instruction = find_instruction(res.mnemonic);
+            if(!pos_of_instruction){
+                res.error = "Unknown mnemonic";
+                add_error(line_of_asm, res.error, res);
+                nerr++;
+                continue;
+            }
+            if(pos_of_instruction->takes_operand ^ res.has_operand){
+                res.error = "mnemonic's operand requirement is unfulfilled"; 
+                add_error(line_of_asm, res.error, res);
+                nerr++;  
+            }
         }
         /*checked operand is req, now need to check if operand is valid*/
 
         /*what is operand is not valid*/
         /*error checks, errors like???? more or less number of operands, not a number for operand. finding if instruction exists in the instruction table. */
     }
+    return;
     /*will have to add error checks and also populate symbol table*/
 }
 
 int main(int argc, char **argv){
     FILE* fptr;
-    
+    log_file = fopen("assemble.log", "w");
+    if(log_file == NULL){
+        printf("The log file didnt open\n");
+        return 1;
+    }
     if(argc == 2){
         fptr = fopen(argv[1], "r");
     }
@@ -251,7 +279,8 @@ int main(int argc, char **argv){
         return 0;
     }
     else{printf("file is opening\n");}
-    p1(fptr);
-
+    pass1(fptr);
+    fclose(log_file);
+    fclose(fptr);
     return 0;
 }
