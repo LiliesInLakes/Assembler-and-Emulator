@@ -189,8 +189,6 @@ int parser(const char* line, ParserResult* result){
         result->has_mnemonic = 1;
         token = strtok(NULL, " \t\r\n;");
         if (token) {
-            /*need to check operand is number here only*/
-
             result->operand = strdup(trim_white_space(token));
             result->has_operand = 1;
         }
@@ -202,7 +200,7 @@ int parser(const char* line, ParserResult* result){
             add_error(line, result->error, *result);
             nerr++;
             free(head_of_linecpy);
-            return 0;
+            return 1; /*because we still want to populate the symbol table with the mnemonic*/
         }
     }
     free(head_of_linecpy);
@@ -248,13 +246,14 @@ void pass1(FILE* fptr){
             if(pos_of_instruction->takes_operand ^ res.has_operand){
                 res.error = "mnemonic's operand requirement is unfulfilled"; 
                 add_error(line_of_asm, res.error, res);
-                nerr++;  
+                nerr++;
+                /*not doing continue here because we can still populate the symbol table and see if there are more errors. If */
             }
         }
         /*checked operand is req, now need to check if operand is valid*/
 
         /*what is operand is not valid*/
-        /*error checks, errors like???? more or less number of operands, not a number for operand. finding if instruction exists in the instruction table. */
+        /*error checks, errors like???? not a number for operand. finding if instruction exists in the instruction table. */
     }
     return;
     /*will have to add error checks and also populate symbol table*/
