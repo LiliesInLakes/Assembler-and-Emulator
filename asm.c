@@ -23,7 +23,8 @@ typedef struct {
 /*structure for symbol table*/
 typedef struct {
     char name[64];
-    int value; /*pc*/
+    int value; /*pc*/ 
+    /*how do i add mnemonic and operand though??*/
 } Symbol;
 
 /*structure for parser function*/
@@ -374,9 +375,10 @@ void pass2(FILE* fptr){
         return_of_parser = parser(line_of_asm, &res);
         if(!return_of_parser || res.is_comment_only || !res.has_mnemonic){
             if(debug){
-                printf("pass2: !return_of_parser || res.is_comment_only true\n");
+                printf("pass2: !return_of_parser || res.is_comment_only || !res.has_mnemonic true\n");
             }
-            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further. if it is all comments then also same*/
+            continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further. 
+            if it is all comments or doesnt have mnemonic then also same*/
         }
         if(res.mnemonic){
             if(debug){
@@ -385,8 +387,41 @@ void pass2(FILE* fptr){
             pos_of_instruction = find_instruction(res.mnemonic);
             if(pos_of_instruction->takes_operand && res.has_operand){
                 /*convert operand to number else treat as label and find in symbol table.*/
+                operand_num = strtol(res.operand, &endptr, 0);
+                if(endptr == res.operand || *endptr != '\0'){
+                    /*means that operand is not a number. so need to check if it is a var*/
+                    if(find_symbol(res.operand) != 1){
+                        /*if res.operand is a variable then it will be there in symbol table. but since it isnt:*/
+                        add_error(line_of_asm, "Operand not a valid number", res);
+                        nerr++;
+                        continue;
+                    }
+                    else{
+                        /*this will only work if label is SET*/
+                        /*find the label with the set check if that lavel is valid*/
+                        if(strcmp(, "SET") == 0){
+                            operand_num = strtol()
+                        }
+                        else{
+                            /*label isnt SET so there will be an error*/
+                        }
+                        /*replace label with value*/
+                        
+                    }
+                    
+                }
+                else{
+                    /*operand is a number*/
+                    
+                }
             }
-            /* if this if is not satisfied then it will have already raised an error in pass1. 
+            else{
+                /*either it doesnt take operand or it doesnt have operand*/
+            }
+            /* 
+            For branches (call, brz, brlz, br): offset = label_address - (pc + 1).
+            For everything else, a label’s address is used directly as the value, and numbers are used as-is.
+            if this if is not satisfied then it will have already raised an error in pass1. 
             but then what about opcode??? 
             find opcode
             Write the listing (address, machine word in hex, source line) as you go, and write the binary object file with fwrite only if nerr == 0 at the end.
