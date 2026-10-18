@@ -7,7 +7,7 @@
         ldc 010        ; octal = 8
         ldc -0x10      ; negative hex
         div
-        adj 3
+        adj -3
         a2sp
         sp2a
         HALT
