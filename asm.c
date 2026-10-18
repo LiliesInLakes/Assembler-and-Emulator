@@ -23,7 +23,7 @@ typedef struct {
 /*structure for symbol table*/
 typedef struct {
     char name[64];
-    int value;
+    int value; /*pc*/
 } Symbol;
 
 /*structure for parser function*/
@@ -64,6 +64,7 @@ static const InstructionDef inst_table[] = {
     {"HALT", 18, 0},
     {"mul",  19, 0},
     {"div",  20, 0},
+    {"SET", -1, 1},
     {NULL,   -1, 0}
 };
 
@@ -358,6 +359,8 @@ void pass1(FILE* fptr){
 
 void pass2(FILE* fptr){
     int pc = 0;
+    long int operand_num;
+    char* endptr = NULL;
     char line_of_asm[64];
     ParserResult res;
     int return_of_parser;
@@ -377,7 +380,7 @@ void pass2(FILE* fptr){
         }
         if(res.mnemonic){
             if(debug){
-                printf("pass1: res.mnemonic true\n");
+                printf("pass2: res.mnemonic true\n");
             }
             pos_of_instruction = find_instruction(res.mnemonic);
             if(pos_of_instruction->takes_operand && res.has_operand){
