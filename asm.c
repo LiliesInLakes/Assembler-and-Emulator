@@ -7,7 +7,7 @@
 */
 
 
-/*switch debug, 0 hai toh printing nahi hogi. also, strdub karlo toh theek ho jaayega*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,8 +23,7 @@ typedef struct {
 /*structure for symbol table*/
 typedef struct {
     char name[64];
-    int value; /*pc*/ 
-    /*how do i add mnemonic and operand though??*/
+    int value;
 } Symbol;
 
 /*structure for parser function*/
@@ -62,7 +61,7 @@ static const InstructionDef inst_table[] = {
     {"brz",  15, 1},
     {"brlz", 16, 1},
     {"br",   17, 1},
-    {"HALT", 18, 0},
+    {"halt", 18, 0},
     {"mul",  19, 0},
     {"div",  20, 0},
     {"SET", -1, 1},
@@ -338,7 +337,7 @@ void pass1(FILE* fptr){
     int value4symbol_table;
     int operand_num;
     char* endptr;
-    char line_of_asm[256]; /*then what is the point of keeping parserResult as dynamic if line is static ;(*/
+    char line_of_asm[256];
     ParserResult res;
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
@@ -369,7 +368,7 @@ void pass1(FILE* fptr){
                 res.error = "mnemonic's operand requirement is unfulfilled"; 
                 add_error(line_of_asm, res.error, res);
                 nerr++;
-                /*not doing continue here because we can still populate the symbol table and see if there are more errors. If */
+                /*not doing continue here because we can still populate the symbol table and see if there are more errors. */
             }
         }
         if(res.has_mnemonic && strcmp(res.mnemonic , "SET") == 0){
