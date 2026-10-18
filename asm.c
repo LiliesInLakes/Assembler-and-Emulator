@@ -70,11 +70,23 @@ static const InstructionDef inst_table[] = {
 };
 
 static Symbol *symbol_table;
-static int nsyms=0;
+static int nsyms = 0;
 static int nerr = 0;
 FILE *log_file = NULL;
-int debug=0;
+int debug = 1;
 
+
+int get_symbol(const char *name, int *value){
+    int i;
+
+    for(i = 0; i < nsyms; i++){
+        if(strcmp(symbol_table[i].name, name) == 0){
+            *value = symbol_table[i].value;
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int find_symbol(char *label){
     int i;
@@ -304,7 +316,10 @@ void print_symbol_table(FILE *out){
 
 void pass1(FILE* fptr){
     int pc = 0;
-    char line_of_asm[64]; /*then what is the point of keeping parserResult as dynamic if line is static ;(*/
+    int value4symbol_table;
+    int operand_num;
+    char* endptr;
+    char line_of_asm[256]; /*then what is the point of keeping parserResult as dynamic if line is static ;(*/
     ParserResult res;
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
@@ -338,10 +353,28 @@ void pass1(FILE* fptr){
                 /*not doing continue here because we can still populate the symbol table and see if there are more errors. If */
             }
         }
+        if(res.has_mnemonic && (res.mnemonic, "SET") == 0){
+            /*value4 symbol table will be the value in symbol*/
+            operand_num = strtol(res.operand, &endptr, 0);
+                if(endptr == res.operand || *endptr != '\0'){
+                    /*means that operand is not a number. so need to check if it is a var*/
+                    /*if res.operand is a variable then it will be there in symbol table. but since it isnt:*/
+                    add_error(line_of_asm, "Operand not a valid number", res);
+                    nerr++;
+                    continue;
+                }
+                else{
+                    /*operand is a valid number*/
+                    value4symbol_table = operand_num;
+                }
+        }
+        else{
+            value4symbol_table = pc;
+        }
         if(debug){
             printf("going to populate symbol table now\n");
         }
-        if(res.has_label && !add_to_symbol_table(res, pc)){
+        if(res.has_label && !add_to_symbol_table(res, value4symbol_table)){
             if(debug){
                 printf("add to symbol table gave 0\n");
             }
@@ -349,7 +382,7 @@ void pass1(FILE* fptr){
             nerr++;
         }
         
-        if(res.has_mnemonic){
+        if(res.has_mnemonic && strcmp(res.mnemonic, "SET") != 0){
             pc++;
         }
     }
@@ -360,9 +393,10 @@ void pass1(FILE* fptr){
 
 void pass2(FILE* fptr){
     int pc = 0;
-    long int operand_num;
+    long int operand_num = 0;
     char* endptr = NULL;
-    char line_of_asm[64];
+    char line_of_asm[256];
+    int op_val_set;
     ParserResult res;
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
@@ -385,28 +419,24 @@ void pass2(FILE* fptr){
                 printf("pass2: res.mnemonic true\n");
             }
             pos_of_instruction = find_instruction(res.mnemonic);
+            if(!pos_of_instruction || strcmp(res.mnemonic, "SET") == 0){
+                continue;
+            }
             if(pos_of_instruction->takes_operand && res.has_operand){
                 /*convert operand to number else treat as label and find in symbol table.*/
                 operand_num = strtol(res.operand, &endptr, 0);
                 if(endptr == res.operand || *endptr != '\0'){
                     /*means that operand is not a number. so need to check if it is a var*/
-                    if(find_symbol(res.operand) != 1){
+                    if(!get_symbol(res.label, &op_val_set)){
                         /*if res.operand is a variable then it will be there in symbol table. but since it isnt:*/
                         add_error(line_of_asm, "Operand not a valid number", res);
                         nerr++;
                         continue;
                     }
+                    
                     else{
                         /*this will only work if label is SET*/
-                        /*find the label with the set check if that lavel is valid*/
-                        if(strcmp(, "SET") == 0){
-                            operand_num = strtol()
-                        }
-                        else{
-                            /*label isnt SET so there will be an error*/
-                        }
-                        /*replace label with value*/
-                        
+                        operand_num = op_val_set;
                     }
                     
                 }
@@ -452,6 +482,8 @@ int main(int argc, char **argv){
     }
     else{printf("file is opening\n");}
     pass1(fptr);
+    rewind(fptr);
+    pass2(fptr);
     fclose(log_file);
     fclose(fptr);
     return 0;
