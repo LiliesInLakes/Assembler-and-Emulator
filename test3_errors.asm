@@ -1,3 +1,5 @@
+; Author       : Avni Agarwal
+; Roll No.     : 2501AI27
 ; Test 3: every kind of error (all reported in one run)
 start:  ldc 1
         ldc nonesuch    ; undefined label

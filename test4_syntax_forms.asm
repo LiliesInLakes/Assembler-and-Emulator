@@ -1,4 +1,6 @@
-; Test 4: the line formats allowed by the spec
+; Author       : Avni Agarwal
+; Roll No.     : 2501AI27
+; Test 4: the line formats allowed by the spec. Checks that every legal way of laying out a line is accepted.
 ; just a comment
 
 label1:                 ; label on its own

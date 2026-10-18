@@ -1,3 +1,5 @@
+; Author       : Avni Agarwal
+; Roll No.     : 2501AI27
 ; Test 5: warnings only (still assembles) - unused labels, infinite loop, no HALT
 unused1: ldc 1
 top:     adc 1

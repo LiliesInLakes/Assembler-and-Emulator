@@ -1,9 +1,5 @@
-; ==============================================================================
 ;  Author       : Avni Agarwal
 ;  Roll No.     : 2501AI27
-;  Declaration of Authorship:
-;  I hereby declare that this code is my own original work.
-; ==============================================================================
 
 size:   data 5              ; Number of elements in the array
 array:  data 4              ; array[0] = 4

@@ -61,7 +61,7 @@ static const InstructionDef inst_table[] = {
     {"brz",  15, 1},
     {"brlz", 16, 1},
     {"br",   17, 1},
-    {"halt", 18, 0},
+    {"HALT", 18, 0},
     {"mul",  19, 0},
     {"div",  20, 0},
     {"SET", -1, 1},

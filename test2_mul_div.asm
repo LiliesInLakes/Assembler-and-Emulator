@@ -1,3 +1,5 @@
+; Author       : Avni Agarwal
+; Roll No.     : 2501AI27
 ; Test 2: mul and div, plus decimal / hex / octal operands
         ldc 6
         ldc 0x07       ; hex
