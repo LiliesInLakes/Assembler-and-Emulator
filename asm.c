@@ -73,12 +73,25 @@ static Symbol *symbol_table;
 static int nsyms = 0;
 static int nerr = 0;
 FILE *log_file = NULL;
-int debug = 1;
+int debug = 0;
 
+
+static int is_branch(int opcode){
+    return opcode == 13 || opcode == 15 || opcode == 16 || opcode == 17;
+}
+
+
+static char *my_strdup(const char *s){
+       char *p = malloc(strlen(s) + 1);
+       if(p) strcpy(p, s);
+       return p;
+   }
 
 int get_symbol(const char *name, int *value){
     int i;
-
+    if(!name){
+        return 0;
+    }
     for(i = 0; i < nsyms; i++){
         if(strcmp(symbol_table[i].name, name) == 0){
             *value = symbol_table[i].value;
@@ -168,7 +181,9 @@ const InstructionDef *find_instruction(const char *mnemonic) {
 void add_error(const char* line, const char* error, ParserResult res){
     if(log_file){
         fprintf(log_file, "%s       | ERR: %s\n", line, error);
-        fprintf(log_file, "     %s %s %s\n       %d %d %d %d\n", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.has_operand, res.is_comment_only);
+        if(debug){
+            fprintf(log_file, "     %s %s %s\n       %d %d %d %d\n", res.label, res.mnemonic, res.operand, res.has_label, res.has_mnemonic, res.has_operand, res.is_comment_only);
+        }
     }
 }
 
@@ -200,7 +215,7 @@ char* trim_white_space(char* str){
 }
 
 
-int parser(const char* line, ParserResult* result){
+int parser(const char* line, ParserResult* result, int report_errors){
 
     char* line_cpy;
     char* comment;
@@ -258,13 +273,15 @@ int parser(const char* line, ParserResult* result){
     if(colon_pos){
         *colon_pos = '\0';
         if(isalpha((unsigned char)line_cpy[0]) && is_string_alphanumeric(line_cpy+1)){
-            result->label = strdup(line_cpy);
+            result->label = my_strdup(line_cpy);
             result->has_label = 1;
         }
         else{
-            result->error = "invalid label name (must be alphanumeric, start with a letter)";
-            add_error(line, result->error, *result);
-            nerr++;
+            if(report_errors){
+                result->error = "invalid label name (must be alphanumeric, start with a letter)";
+                add_error(line, result->error, *result);
+                nerr++;
+            }
             free(head_of_linecpy);
             return 0;
         }
@@ -279,20 +296,22 @@ int parser(const char* line, ParserResult* result){
     /*extracting mnemonic*/
     token = strtok(line_cpy, " \t\r\n");
     if(token){
-        result->mnemonic= strdup(token);
+        result->mnemonic= my_strdup(token);
         result->has_mnemonic = 1;
         token = strtok(NULL, " \t\r\n;");
         if (token) {
-            result->operand = strdup(trim_white_space(token));
+            result->operand = my_strdup(trim_white_space(token));
             result->has_operand = 1;
         }
         /*checking if text exists after operand*/
         token = strtok(NULL, " \t\r\n;");
         if(token){
             if(debug){printf("adding unexpected extra text after operand. the text is %s\n", line_cpy);}
-            result->error = "unexpected extra text after operand";
-            add_error(line, result->error, *result);
-            nerr++;
+            if(report_errors){
+                result->error = "unexpected extra text after operand";
+                add_error(line, result->error, *result);
+                nerr++;
+            }
             free(head_of_linecpy);
             return 1; /*because we still want to populate the symbol table with the mnemonic*/
         }
@@ -328,7 +347,7 @@ void pass1(FILE* fptr){
         if(debug){
             printf("pass1: line: %s\n", line_of_asm);
         }
-        return_of_parser = parser(line_of_asm, &res);
+        return_of_parser = parser(line_of_asm, &res, 1);
         if(!return_of_parser || res.is_comment_only){
             if(debug){
                 printf("pass1: !return_of_parser || res.is_comment_only true\n");
@@ -353,8 +372,11 @@ void pass1(FILE* fptr){
                 /*not doing continue here because we can still populate the symbol table and see if there are more errors. If */
             }
         }
-        if(res.has_mnemonic && (res.mnemonic, "SET") == 0){
+        if(res.has_mnemonic && strcmp(res.mnemonic , "SET") == 0){
             /*value4 symbol table will be the value in symbol*/
+            if(res.operand == NULL){
+                continue;
+            }
             operand_num = strtol(res.operand, &endptr, 0);
                 if(endptr == res.operand || *endptr != '\0'){
                     /*means that operand is not a number. so need to check if it is a var*/
@@ -391,22 +413,24 @@ void pass1(FILE* fptr){
 }
 
 
-void pass2(FILE* fptr){
+void pass2(FILE* fptr, FILE* lst, FILE* obj){
     int pc = 0;
     long int operand_num = 0;
     char* endptr = NULL;
     char line_of_asm[256];
     int op_val_set;
+    unsigned int word;
     ParserResult res;
     int return_of_parser;
     const InstructionDef* pos_of_instruction;
 
 
     while(fgets(line_of_asm, sizeof(line_of_asm), fptr)){
+        operand_num = 0;
         if(debug){
             printf("pass2: line: %s\n", line_of_asm);
         }
-        return_of_parser = parser(line_of_asm, &res);
+        return_of_parser = parser(line_of_asm, &res, 0);
         if(!return_of_parser || res.is_comment_only || !res.has_mnemonic){
             if(debug){
                 printf("pass2: !return_of_parser || res.is_comment_only || !res.has_mnemonic true\n");
@@ -414,57 +438,55 @@ void pass2(FILE* fptr){
             continue; /*if parser result is 0 then there is some error in the line so we dont want to operate on it further. 
             if it is all comments or doesnt have mnemonic then also same*/
         }
-        if(res.mnemonic){
-            if(debug){
-                printf("pass2: res.mnemonic true\n");
-            }
-            pos_of_instruction = find_instruction(res.mnemonic);
-            if(!pos_of_instruction || strcmp(res.mnemonic, "SET") == 0){
-                continue;
-            }
-            if(pos_of_instruction->takes_operand && res.has_operand){
-                /*convert operand to number else treat as label and find in symbol table.*/
-                operand_num = strtol(res.operand, &endptr, 0);
-                if(endptr == res.operand || *endptr != '\0'){
-                    /*means that operand is not a number. so need to check if it is a var*/
-                    if(!get_symbol(res.label, &op_val_set)){
-                        /*if res.operand is a variable then it will be there in symbol table. but since it isnt:*/
-                        add_error(line_of_asm, "Operand not a valid number", res);
-                        nerr++;
-                        continue;
-                    }
-                    
-                    else{
-                        /*this will only work if label is SET*/
-                        operand_num = op_val_set;
-                    }
-                    
+        pos_of_instruction = find_instruction(res.mnemonic);
+        if(!pos_of_instruction || strcmp(res.mnemonic, "SET") == 0){
+            continue;
+        }
+        if(pos_of_instruction->takes_operand && res.has_operand){
+            /*convert operand to number else treat as label and find in symbol table.*/
+            operand_num = strtol(res.operand, &endptr, 0);
+            if(endptr == res.operand || *endptr != '\0'){
+                /*means that operand is not a number. so need to check if it is a var*/
+                if(!get_symbol(res.operand, &op_val_set)){
+                    /*if res.operand is a variable then it will be there in symbol table. but since it isnt:*/
+                    add_error(line_of_asm, "Operand not a valid number", res);
+                    nerr++;
+                    continue;
+                }
+                if(is_branch(pos_of_instruction->opcode)){
+                    operand_num = op_val_set - (pc + 1);   /* displacement */
                 }
                 else{
-                    /*operand is a number*/
-                    
+                    /*this will only work if label is SET*/
+                    operand_num = op_val_set;
                 }
+                
             }
-            else{
-                /*either it doesnt take operand or it doesnt have operand*/
-            }
-            /* 
-            For branches (call, brz, brlz, br): offset = label_address - (pc + 1).
-            For everything else, a label’s address is used directly as the value, and numbers are used as-is.
-            if this if is not satisfied then it will have already raised an error in pass1. 
-            but then what about opcode??? 
-            find opcode
-            Write the listing (address, machine word in hex, source line) as you go, and write the binary object file with fwrite only if nerr == 0 at the end.
-            */
-            pc++;
         }
+        if(pos_of_instruction->opcode == -1){                  
+            word = (unsigned int)operand_num;
+        } else {
+            word = (((unsigned int)operand_num & 0xFFFFFF) << 8) | (unsigned int)pos_of_instruction->opcode;
+        }
+
+        fprintf(lst, "%08X %08X %s", pc, word, line_of_asm);
+        fwrite(&word, sizeof(word), 1, obj);
+        pc++;
+    
     }
     return;
 }
 
 int main(int argc, char **argv){
     FILE* fptr;
+    FILE* lst;
+    FILE* obj;
+
     log_file = fopen("assemble.log", "w");
+    lst = fopen("assemble.lst", "w");
+    obj = fopen("assemble.o", "wb");
+    
+    
     if(log_file == NULL){
         printf("The log file didnt open\n");
         return 1;
@@ -483,8 +505,19 @@ int main(int argc, char **argv){
     else{printf("file is opening\n");}
     pass1(fptr);
     rewind(fptr);
-    pass2(fptr);
+    pass2(fptr, lst, obj);
+    fclose(lst);
+    fclose(obj);
+    if(nerr > 0){
+        remove("assemble.lst");
+        remove("assemble.o");
+        fprintf(log_file, "%d error(s)\n", nerr);
+        printf("%d error(s), see %s\n", nerr, "assemble.log");
+    } else {
+        fprintf(log_file, "Assembled OK, 0 errors\n");
+        printf("Assembled OK, 0 errors\n");
+    }
     fclose(log_file);
     fclose(fptr);
-    return 0;
+    return nerr > 0;
 }
